@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import Button from '../Common/Button';
-import { fetchStudents } from '../../registration/api';
+import { fetchStudents, fetchComplaintsForAdmins, changeComplaintStatusForAdmin } from '../../service/api';
 
 const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -17,29 +16,15 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          throw new Error('No access token found. Please login again.');
-        }
-
         // Fetch complaints
-        const complaintsResponse = await axios.post(
-          'https://finalbackend-mauve.vercel.app/fetchcomplaintforadmins',
-          { token },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        const complaintsResponse = await fetchComplaintsForAdmins();
 
         // Fetch students
         const studentsData = await fetchStudents();
 
-        if (complaintsResponse.data.success) {
+        if (complaintsResponse.success) {
           // Map API data to component's expected structure
-          const mappedComplaints = complaintsResponse.data.data.map((item) => {
+          const mappedComplaints = complaintsResponse.data.map((item) => {
             // Find student info by student_id
             const student = studentsData.find(s => s.id === item.student_id);
             return {
@@ -59,7 +44,7 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
           setStudents(studentsData);
         } else {
           setComplaints([]);
-          setError(complaintsResponse.data.message || 'Failed to fetch complaints');
+          setError(complaintsResponse.message || 'Failed to fetch complaints');
         }
       } catch (err) {
         setError(err.message || 'Error fetching complaints');
@@ -79,36 +64,19 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
     // Call admin complaint status change API
     (async () => {
       try {
-        const accessToken = localStorage.getItem('accessToken');
-        const payload = {
-          complaint_id: String(complaintId),
-          status: newStatus,
-        };
+        const response = await changeComplaintStatusForAdmin(complaintId, newStatus);
 
-        // If accessToken is available, prefer Authorization header
-        const headers = {
-          'Content-Type': 'application/json',
-        };
-        if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
-
-        const resp = await axios.post(
-          'https://finalbackend-mauve.vercel.app/complaintstatuschangeforadmin',
-          accessToken ? payload : { ...payload, token: '' },
-          { headers }
-        );
-
-        if (resp && resp.data && resp.data.success) {
+        if (response.success) {
           // Update local state
-          setComplaints(prev => prev.map(c => c.id === complaintId ? { ...c, status: resp.data.status || newStatus } : c));
-          alert(resp.data.message || 'Updated successfully');
+          setComplaints(prev => prev.map(c => c.id === complaintId ? { ...c, status: response.status || newStatus } : c));
+          alert(response.message || 'Updated successfully');
         } else {
-          const message = resp?.data?.message || resp?.data?.error || 'Failed to update status';
+          const message = response.message || response.error || 'Failed to update status';
           alert(message);
         }
       } catch (err) {
         console.error('Error updating complaint status:', err);
-        const msg = err?.response?.data?.message || err?.message || 'Internal Server Error';
-        alert(msg);
+        alert('Network error. Please try again.');
       }
     })();
   };

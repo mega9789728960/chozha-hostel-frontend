@@ -1,259 +1,131 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_BASE = "https://finalbackend-mauve.vercel.app";
+const API_BASE_URL = 'https://finalbackend-mauve.vercel.app';
 
-// Axios instance
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true, // include cookies automatically
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// ====== API CALLS ======
-
-// Send OTP
 export const sendOTP = async (email) => {
-  if (!email) return { success: false, error: "Email is required", status: 400 };
-
   try {
-    const emailPushResponse = await api.post("/emailpush", { email });
-    const emailPushData = emailPushResponse.data;
-
-    let result;
-    switch (emailPushResponse.status) {
-      case 200:
-        result = {
-          success: true,
-          message: emailPushData.message || "Email already exists, pending verification",
-          data: emailPushData.data || { email },
-        };
-        break;
-      case 201:
-        result = {
-          success: true,
-          message: emailPushData.message || "Email record initialized, waiting for verification code",
-          data: emailPushData.data || { email },
-        };
-        break;
-      default:
-        result = { success: false, error: emailPushData.error || "Unexpected error" };
-    }
-
-    if (!result.success) return result;
-
-    const sendCodeResponse = await api.post("/sendcode", { email });
-    const sendCodeData = sendCodeResponse.data;
-
-    if (sendCodeResponse.status === 200) {
-      return {
-        ...result,
-        sendCodeMessage: sendCodeData.message || "Verification code sent to email",
-        expiringtime: sendCodeData.expiringtime || null,
-      };
-    }
-
-    return { success: false, message: sendCodeData.message || "Unexpected error sending verification code" };
+    const response = await axios.post(`${API_BASE_URL}/sendotp`, { email });
+    return response.data;
   } catch (error) {
-    return { success: false, error: "Error sending OTP: " + (error.response?.data?.message || error.message) };
+    throw new Error(error.response?.data?.message || 'Failed to send OTP');
   }
 };
 
-// Verify OTP
-export const verifyOTP = async (email, code) => {
-  if (!email || !code) return { success: false, message: "Email and code are required" };
-
+export const verifyOTP = async (email, otp) => {
   try {
-    const response = await api.post("/emailverify", { email, code });
-    return { success: true, message: response.data.message || "Email verified successfully" };
+    const response = await axios.post(`${API_BASE_URL}/verifyotp`, { email, otp });
+    return response.data;
   } catch (error) {
-    return { success: false, message: error.response?.data?.message || "Error verifying OTP" };
+    throw new Error(error.response?.data?.message || 'Failed to verify OTP');
   }
 };
 
-// Register User
 export const registerUser = async (payload) => {
   try {
-    const response = await api.post("/register", payload);
-    return {
-      success: true,
-      message: response.data.message || "User registered successfully",
-      user: response.data.user || {},
-      token: response.data.token,
-    };
-  } catch (error) {
-    return { success: false, message: error.response?.data?.message || "Error during registration" };
-  }
-};
-
-// Fetch Students
-export const fetchStudents = async () => {
-  try {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.post(
-      "/fetchstudents",
-      { token }, // ✅ send in body
-      { headers: { Authorization: `Bearer ${token}` } } // ✅ send in headers
-    );
-
-    const data = response.data;
-    if (data.success && Array.isArray(data.data)) return data.data;
-    if (Array.isArray(data)) return data;
-    if (data.students) return data.students;
-    if (data.studentsdata) return data.studentsdata;
-
-    return [];
-  } catch (err) {
-    console.error("Error fetching students:", err);
-    return [];
-  }
-};
-
-// Approve Student
-export const approveStudent = async (registrationNumber) => {
-  try {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.post(
-      "/approve",
-      { registerno: registrationNumber, token }, // ✅ token in body
-      { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
-    );
-
+    const response = await axios.post(`${API_BASE_URL}/register`, payload);
     return response.data;
   } catch (error) {
-    console.error("Error approving student:", error);
-    throw error;
+    throw new Error(error.response?.data?.message || 'Registration failed');
   }
 };
 
-// Add Department
-export const addDepartment = async (departmentName) => {
-  try {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.post(
-      "/adddepartments",
-      { department: departmentName, token }, // ✅ token in body
-      { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error("Error adding department:", error);
-    throw error;
-  }
-};
-
-// Fetch Departments
 export const fetchDepartments = async () => {
   try {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.post(
-      "/fetchdepartments",
-      { token }, // ✅ token in body
-      { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
-    );
-
-    if (response.data.success && Array.isArray(response.data.result)) return response.data.result;
-    throw new Error("Invalid response format from API");
-  } catch (error) {
-    console.error("Error fetching departments:", error);
-    throw error;
-  }
-};
-
-// Edit Department
-export const editDepartment = async (oldDepartment, newDepartment) => {
-  try {
-    const token = localStorage.getItem("accessToken");
-    const response = await api.put(
-      "/editdepartment",
-      { oldDepartment, newDepartment, token }, // ✅ token in body
-      { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error("Error editing department:", error);
-    throw error;
-  }
-};
-
-// Reject Student
-export const rejectStudent = async (registrationNumber, reason) => {
-  try {
-    const authToken = localStorage.getItem("accessToken");
-    if (!authToken) {
-      throw new Error("No authentication token found. Please log in again.");
-    }
-
-    const response = await api.post(
-      "/adminreject",
-      { registerno: registrationNumber, reason },
-      { headers: { Authorization: `Bearer ${authToken}` }, withCredentials: true }
-    );
-
-    // Update token if provided
-    if (response.data.token) {
-      localStorage.setItem("accessToken", response.data.token);
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error rejecting student:", error);
-    throw error;
-  }
-};
-
-// Edit Student Details
-export const editStudentDetails = async (studentId, studentData) => {
-  try {
-    const authToken = localStorage.getItem("accessToken");
-    if (!authToken) {
-      throw new Error("No authentication token found. Please log in again.");
-    }
-
-    const response = await api.put(
-      "/editstudentsdetails",
-      { id: studentId, token: authToken, ...studentData },
-      { headers: { Authorization: `Bearer ${authToken}` }, withCredentials: true }
-    );
-
-    // Update token if provided
-    if (response.data.token) {
-      localStorage.setItem("accessToken", response.data.token);
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error editing student:", error);
-    throw error;
-  }
-};
-
-// Show Attendance Records
-export const showAttends = async (filters = {}) => {
-  try {
-    const authToken = localStorage.getItem("accessToken");
-    if (!authToken) {
-      throw new Error("No authentication token found. Please log in again.");
-    }
-
-    const requestBody = { token: authToken };
-
-    const response = await api.post("/showattends", requestBody, {
-      headers: { Authorization: `Bearer ${authToken}` },
-      withCredentials: true, // ✅ ensures cookies are included
+    const token = localStorage.getItem('accessToken');
+    const response = await axios.get(`${API_BASE_URL}/fetchdepartments`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      withCredentials: true,
     });
-    console.log(response);
+    return response.data.departments || [];
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch departments');
+  }
+};
 
-    if (response.status !== 200) {
-      throw new Error(response.data.message || `Failed to fetch attendance: ${response.status}`);
-    }
-
+export const addDepartment = async (departmentName) => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const response = await axios.post(
+      `${API_BASE_URL}/adddepartment`,
+      { department: departmentName },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
-    console.error("Error fetching attendance:", error);
-    throw error;
+    throw new Error(error.response?.data?.message || 'Failed to add department');
+  }
+};
+
+export const editDepartment = async (oldName, newName) => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const response = await axios.post(
+      `${API_BASE_URL}/editdepartment`,
+      { old_department: oldName, new_department: newName },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        withCredentials: true,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to edit department');
+  }
+};
+
+export const deleteDepartment = async (departmentId) => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const response = await axios.post(
+      `${API_BASE_URL}/deletedepartment`,
+      { department_id: departmentId },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        withCredentials: true,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to delete department');
+  }
+};
+
+export const promoteStudent = async (email, isDeleteFinalYear) => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const response = await axios.post(
+      `${API_BASE_URL}/promotion`,
+      {
+        email,
+        isdeletefinalyear: isDeleteFinalYear,
+        token,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        withCredentials: true,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to process promotion');
   }
 };

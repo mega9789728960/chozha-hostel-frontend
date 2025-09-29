@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent } from '../Common/Card';
 import Button from '../Common/Button';
 import StudentTable from './StudentTable';
 import EditStudentModal from './EditStudentModal';
-import { fetchStudents as fetchStudentsAPI, approveStudent, rejectStudent, editStudentDetails } from '../../registration/api';
+import { fetchStudents as fetchStudentsAPI, approveStudent, rejectStudent, editStudentDetails } from '../../service/api';
 
 const Students = ({ isDarkMode }) => {
   const [searchTerm, setSearchTerm] = useState('');

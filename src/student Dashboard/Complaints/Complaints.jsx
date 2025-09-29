@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { fetchComplaintsForStudents } from '../service/api';
 import ComplaintModal from './ComplaintModal';
 
 const Complaints = () => {
@@ -31,112 +31,24 @@ const Complaints = () => {
       setLoading(true);
       setError(null);
 
-      // Get token from storage
-      const token = localStorage.getItem('studentToken') || 
-                   localStorage.getItem('accessToken') ||
-                   sessionStorage.getItem('studentToken');
-      
-      if (!token) {
-        throw new Error('No authentication token found. Please log in again.');
+      const response = await fetchComplaintsForStudents();
+
+      if (response.success) {
+        const complaintsData = Array.isArray(response.data) ? response.data : [];
+        setComplaints(complaintsData);
+
+        const total = complaintsData.length;
+        const pending = complaintsData.filter(c => c.status && c.status.toLowerCase() === 'pending').length;
+        const inProgress = complaintsData.filter(c => c.status && c.status.toLowerCase() === 'in progress').length;
+        const resolved = complaintsData.filter(c => c.status && c.status.toLowerCase() === 'resolved').length;
+
+        setStats({ total, pending, inProgress, resolved });
+      } else {
+        setError(response.message || 'Failed to fetch complaints');
       }
-
-      // Debug: Check what's in the JWT token
-      const decodedToken = decodeJWT(token);
-      console.log('Decoded JWT token:', decodedToken);
-      
-      if (decodedToken) {
-        console.log('Token role:', decodedToken.role);
-        console.log('Token student ID:', decodedToken.id);
-      }
-
-      // Try both request formats as per API documentation
-      const requestBodies = [
-        { token }, // Option 2: Without Student ID
-        { id: decodedToken?.id, token } // Option 1: With Student ID
-      ];
-
-      for (const body of requestBodies) {
-        try {
-          console.log('Trying request with body:', body);
-
-          const response = await axios.post('https://finalbackend-mauve.vercel.app/fetchcomplaintsforstudents', body,token, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            withCredentials: true
-          });
-
-          const data = response.data;
-          console.log('API response data:', data);
-
-          if (data.success) {
-            // Handle successful response
-            const complaintsData = Array.isArray(data.data) ? data.data : [];
-            console.log('Raw complaints data:', complaintsData);
-
-            // Debug: Log all status values
-            complaintsData.forEach((complaint, index) => {
-              console.log(`Complaint ${index}:`, {
-                id: complaint.complaint_id,
-                title: complaint.title,
-                status: complaint.status,
-                statusType: typeof complaint.status
-              });
-            });
-
-            setComplaints(complaintsData);
-
-            const total = complaintsData.length;
-            const pending = complaintsData.filter(c => {
-              const matches = c.status && c.status.toLowerCase() === 'pending';
-              console.log(`Pending check for "${c.status}": ${matches}`);
-              return matches;
-            }).length;
-            const inProgress = complaintsData.filter(c => {
-              const matches = c.status && c.status.toLowerCase() === 'in progress';
-              console.log(`In Progress check for "${c.status}": ${matches}`);
-              return matches;
-            }).length;
-            const resolved = complaintsData.filter(c => {
-              const matches = c.status && c.status.toLowerCase() === 'resolved';
-              console.log(`Resolved check for "${c.status}": ${matches}`);
-              return matches;
-            }).length;
-
-            console.log('Calculated stats:', { total, pending, inProgress, resolved });
-            setStats({ total, pending, inProgress, resolved });
-
-            return; // Success, exit the function
-          } else if (data.error === 'Forbidden: not student') {
-            // Specific error handling for role issues
-            throw new Error('Your account does not have student permissions. Please contact administration.');
-          } else {
-            throw new Error(data.error || 'Failed to fetch complaints');
-          }
-        } catch (err) {
-          // Handle axios errors
-          if (err.response && err.response.status === 403) {
-            const errorData = err.response.data;
-            if (errorData && errorData.error === 'Forbidden: not student') {
-              err = new Error('Your account does not have student permissions. Please contact administration.');
-            } else {
-              err = new Error(errorData?.error || 'Access forbidden');
-            }
-          } else if (err.response) {
-            err = new Error('Failed to fetch complaints');
-          } // else keep err as is for network error
-          // If this is the last approach, re-throw the error
-          if (body === requestBodies[requestBodies.length - 1]) {
-            throw err;
-          }
-          console.log('Request approach failed, trying next one...');
-        }
-      }
-      
     } catch (err) {
       console.error('Error fetching complaints:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to fetch complaints');
     } finally {
       setLoading(false);
     }

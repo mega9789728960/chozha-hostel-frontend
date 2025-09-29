@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Card, CardHeader, CardContent } from '../Common/Card';
 import Button from '../Common/Button';
 import Modal from '../Common/Modal';
 import DepartmentTable from './DepartmentTable';
-import { addDepartment, fetchDepartments, editDepartment } from '../../registration/api';
+import { addDepartment, fetchDepartments, editDepartment, deleteDepartment } from '../../registration/api';
 
 const Departments = ({ isDarkMode }) => {
   const [departments, setDepartments] = useState([]);
@@ -102,32 +101,18 @@ const Departments = ({ isDarkMode }) => {
     if (!window.confirm('Are you sure you want to delete this department?')) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/deletedepartment',
-        {
-          token,
-          department_id: departmentId
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
-          },
-          withCredentials: true
-        }
-      );
+      const response = await deleteDepartment(departmentId);
 
-      if (response.data.success) {
-        setSuccessMessage(response.data.message || 'Department deleted successfully');
+      if (response.success) {
+        setSuccessMessage(response.message || 'Department deleted successfully');
         setShowSuccessModal(true);
         fetchDepartmentsData();
       } else {
-        alert(response.data.message || 'Failed to delete department');
+        alert(response.message || 'Failed to delete department');
       }
     } catch (err) {
       console.error('Error deleting department:', err);
-      alert(`Failed to delete department: ${err.response?.data?.message || err.message}`);
+      alert(`Failed to delete department: ${err.message}`);
     }
   };
 

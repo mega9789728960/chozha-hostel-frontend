@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Card, CardHeader, CardContent } from './Common/Card';
 import Button from './Common/Button';
+import { promoteStudent } from '../../registration/api';
 
 const Promotion = ({ isDarkMode }) => {
   const [email, setEmail] = useState('');
@@ -23,35 +23,20 @@ const Promotion = ({ isDarkMode }) => {
     setMessageType('');
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/promotion',
-        {
-          email: email.trim(),
-          isdeletefinalyear: isDeleteFinalYear,
-          token
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
-          },
-          withCredentials: true
-        }
-      );
+      const response = await promoteStudent(email.trim(), isDeleteFinalYear);
 
-      if (response.data.success) {
-        setMessage(response.data.message || 'Promotion processed successfully');
+      if (response.success) {
+        setMessage(response.message || 'Promotion processed successfully');
         setMessageType('success');
         setEmail('');
         setIsDeleteFinalYear(false);
       } else {
-        setMessage(response.data.message || 'Failed to process promotion');
+        setMessage(response.message || 'Failed to process promotion');
         setMessageType('error');
       }
     } catch (err) {
       console.error('Error processing promotion:', err);
-      setMessage(err.response?.data?.message || 'Failed to process promotion');
+      setMessage(err.message || 'Failed to process promotion');
       setMessageType('error');
     } finally {
       setSubmitting(false);

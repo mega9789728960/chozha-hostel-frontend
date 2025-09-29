@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { pushAnnouncement, fetchAnnouncementsForAdmin, editAnnouncementForAdmin } from '../../service/api';
 import Button from '../Common/Button';
 
 const AnnouncementForm = () => {
@@ -45,23 +45,10 @@ const AnnouncementForm = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/fetchannocementforadmin',
-        {
-          token
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
-          },
-          withCredentials: true
-        }
-      );
+      const response = await fetchAnnouncementsForAdmin();
 
-      if (response.data.success) {
-        const fetchedAnnouncements = response.data.data || response.data.announcements || [];
+      if (response.success) {
+        const fetchedAnnouncements = response.data || response.announcements || [];
         const mappedAnnouncements = fetchedAnnouncements.map(ann => ({
           ...ann,
           status: new Date(ann.scheduled_date) > new Date() ? 'Scheduled' : 'Sent',
@@ -72,7 +59,7 @@ const AnnouncementForm = () => {
         }));
         setAnnouncements(mappedAnnouncements);
       } else {
-        setErrorAnnouncements(response.data.message || 'No announcements found');
+        setErrorAnnouncements(response.message || 'No announcements found');
       }
     } catch (err) {
       console.error(err);
@@ -116,22 +103,6 @@ const AnnouncementForm = () => {
     return new Promise((resolve) => setTimeout(() => resolve('success'), 1000));
   };
 
-  const sendAnnouncementAPI = async (data) => {
-    const token = localStorage.getItem('accessToken');
-    const response = await axios.post(
-      'https://finalbackend-mauve.vercel.app/pushannocement',
-      data,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
-        },
-        withCredentials: true
-      }
-    );
-    return response.data;
-  };
-
   const sendToStudentsDashboard = async (announcement) => {
     const priority = announcement.priority.toLowerCase();
     const targets = announcement.targetAudience === 'All Students' ? [1, 2, 3, 4] : [getTargetNumber(announcement.targetAudience)];
@@ -145,36 +116,9 @@ const AnnouncementForm = () => {
         message: announcement.message,
         priority,
         target,
-        scheduled_date,
-        ...(localStorage.getItem('accessToken') && { token: localStorage.getItem('accessToken') })
+        scheduled_date
       };
-      const pushResponse = await sendAnnouncementAPI(data);
-
-      // After successful push, send notification to students
-      if (pushResponse.success) {
-        try {
-          await axios.post(
-            'https://finalbackend-mauve.vercel.app/sendnotificationforstudents',
-            {
-              title: announcement.title,
-              message: announcement.message,
-              priority,
-              target,
-              ...(localStorage.getItem('accessToken') && { token: localStorage.getItem('accessToken') })
-            },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                ...(localStorage.getItem('accessToken') && { Authorization: `Bearer ${localStorage.getItem('accessToken')}` })
-              },
-              withCredentials: true
-            }
-          );
-        } catch (notificationError) {
-          console.error('Error sending notification to students:', notificationError);
-          // Don't throw error to avoid breaking the flow
-        }
-      }
+      await pushAnnouncement(data);
     }
   };
 
@@ -227,12 +171,6 @@ const AnnouncementForm = () => {
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      alert('Please login to edit announcements');
-      return;
-    }
-
     setEditSubmitting(true);
     try {
       let editPayload = {
@@ -240,8 +178,7 @@ const AnnouncementForm = () => {
         title: editingAnnouncement.title.trim(),
         message: editingAnnouncement.message.trim(),
         priority: editingAnnouncement.priority.toLowerCase(),
-        target: getTargetNumber(editingAnnouncement.targetAudience),
-        token
+        target: getTargetNumber(editingAnnouncement.targetAudience)
       };
 
       const hasSchedule = editingAnnouncement.scheduledDate && editingAnnouncement.scheduledTime;
@@ -251,25 +188,15 @@ const AnnouncementForm = () => {
         editPayload.scheduled_date = new Date().toISOString();
       }
 
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/editannouncementforadmin',
-        editPayload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          withCredentials: true
-        }
-      );
+      const response = await editAnnouncementForAdmin(editPayload);
 
-      if (response.data.success) {
+      if (response.success) {
         // Update local state
         setAnnouncements(announcements.map(ann =>
           ann.id === editingAnnouncement.id
-            ? { 
-                ...ann, 
-                ...editingAnnouncement, 
+            ? {
+                ...ann,
+                ...editingAnnouncement,
                 priority: editingAnnouncement.priority.charAt(0).toUpperCase() + editingAnnouncement.priority.slice(1),
                 scheduledDate: hasSchedule ? editingAnnouncement.scheduledDate : ann.scheduledDate,
                 sentDate: !hasSchedule ? new Date().toISOString().split('T')[0] : ann.sentDate,
@@ -280,12 +207,11 @@ const AnnouncementForm = () => {
         closeEditModal();
         setSuccessMessage('Announcement edited successfully!');
       } else {
-        alert(response.data.message || 'Failed to edit announcement');
+        alert(response.message || 'Failed to edit announcement');
       }
     } catch (err) {
       console.error('Error editing announcement:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Unknown error occurred';
-      alert(`Failed to edit announcement: ${errorMsg}`);
+      alert(`Failed to edit announcement: ${err.message || 'Unknown error occurred'}`);
     } finally {
       setEditSubmitting(false);
     }

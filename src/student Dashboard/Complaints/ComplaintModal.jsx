@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { registerComplaint } from '../service/api';
 
 const ComplaintModal = ({ onClose }) => {
   const [title, setTitle] = useState('');
@@ -16,49 +16,19 @@ const ComplaintModal = ({ onClose }) => {
     setError('');
     setSuccess('');
 
-    const token = localStorage.getItem('accessToken');
-    console.log("token", token);
-    const studentId = localStorage.getItem('studentId');
-    console.log("student id ", studentId);
-
-    if (!token || !studentId) {
-      setError('Authentication required. Please log in again.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/registercomplaints',
-        {
-          id: parseInt(studentId),
-          title,
-          description,
-          category,
-          priority,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          withCredentials: true, // ensures cookies are sent
-        }
-      );
+      const response = await registerComplaint(title, description, category, priority);
 
-      console.log(document.cookie);
-
-      const data = response.data;
-
-      if (data.success) {
+      if (response.success) {
         setSuccess('Complaint registered successfully!');
         setTimeout(() => {
           onClose();
         }, 2000);
       } else {
-        setError(data.message || data.error || 'Failed to register complaint.');
+        setError(response.message || response.error || 'Failed to register complaint.');
       }
     } catch (err) {
+      console.error('Error registering complaint:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

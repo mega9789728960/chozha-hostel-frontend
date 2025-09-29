@@ -1,14 +1,30 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { markAttendance, markAbsent, showAttends } from '../service/api';
 
 const Attendance = () => {
 
-  const [attendanceMarked, setAttendanceMarked] = useState(false);
-  const [absentMarked, setAbsentMarked] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState(null); // null, 'present', 'absent'
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+
+  useEffect(() => {
+    fetchAttendanceHistory();
+  }, []);
+
+  const fetchAttendanceHistory = async () => {
+    try {
+      const response = await showAttends({});
+      if (response.success) {
+        setAttendanceHistory(response.data || []);
+      } else {
+        console.error('Failed to fetch attendance history:', response.message);
+      }
+    } catch (err) {
+      console.error('Error fetching attendance history:', err);
+    }
+  };
 
   const markAttendance = async () => {
     setLoading(true);
@@ -25,38 +41,19 @@ const Attendance = () => {
       async (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        const token = localStorage.getItem('accessToken');
 
-        if (!token) {
-          setError('No token found. Please log in.');
-          setLoading(false);
-          return;
-        }
-
-        console.log("lat", lat);
-        console.log("lng", lng);
         try {
-          const response = await axios.post('https://finalbackend-mauve.vercel.app/attendance', {
-            lat,
-            lng,
-            status: 'present',
-            token
-          }, {
-            withCredentials: true
-          });
+          const response = await markAttendance({ lat, lng, status: 'present' });
 
-          if (response.data.success) {
+          if (response.success) {
             setMessage('Attendance marked as present successfully!');
             setAttendanceStatus('present');
+            fetchAttendanceHistory(); // Refresh history after marking
           } else {
-            setMessage(response.data.message || 'Attendance already marked for today.');
+            setMessage(response.message || 'Attendance already marked for today.');
           }
         } catch (err) {
-          if (err.response) {
-            setError(err.response.data.error || 'An error occurred.');
-          } else {
-            setError('Network error.');
-          }
+          setError(err.message || 'An error occurred.');
         } finally {
           setLoading(false);
         }
@@ -83,38 +80,19 @@ const Attendance = () => {
       async (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        const token = localStorage.getItem('accessToken');
 
-        if (!token) {
-          setError('No token found. Please log in.');
-          setLoading(false);
-          return;
-        }
-
-        console.log("lat", lat);
-        console.log("lng", lng);
         try {
-          const response = await axios.post('https://finalbackend-mauve.vercel.app/absent', {
-            lat,
-            lng,
-            status: 'absent',
-            token
-          }, {
-            withCredentials: true
-          });
+          const response = await markAbsent({ lat, lng, status: 'absent' });
 
-          if (response.data.success) {
+          if (response.success) {
             setMessage('Attendance marked as absent successfully!');
             setAttendanceStatus('absent');
+            fetchAttendanceHistory(); // Refresh history after marking
           } else {
-            setMessage(response.data.message || 'Attendance already marked for today.');
+            setMessage(response.message || 'Attendance already marked for today.');
           }
         } catch (err) {
-          if (err.response) {
-            setError(err.response.data.error || 'An error occurred.');
-          } else {
-            setError('Network error.');
-          }
+          setError(err.message || 'An error occurred.');
         } finally {
           setLoading(false);
         }
@@ -125,14 +103,6 @@ const Attendance = () => {
       }
     );
   };
-
-
-  // sample attendance history data (replace with real data when available)
-  const attendanceHistory = [
-    { date: 'Dec 20, 2024', self: 'Present', admin: 'Confirmed', time: '09:15 AM', remarks: 'On time' },
-    { date: 'Dec 19, 2024', self: 'Present', admin: 'Confirmed', time: '09:45 AM', remarks: 'Late entry' },
-    { date: 'Dec 18, 2024', self: 'Absent', admin: 'Confirmed', time: '-', remarks: 'Medical leave' }
-  ];
 
   return (
     <div className="max-w-6xl mx-auto px-4">

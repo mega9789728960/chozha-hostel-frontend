@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../Common/Button';
-import { showAttends } from '../../registration/api';
+import { showAttends, changeAttendanceForAdmin, exportAttendance } from '../../service/api';
 
 const Attendance = ({ isDarkMode }) => {
   const [filters, setFilters] = useState({
@@ -68,35 +68,50 @@ const Attendance = ({ isDarkMode }) => {
     fetchAttendanceRecords();
   };
 
-  const handleExport = () => {
-    if (attendanceRecords.length === 0) {
-      alert('No records to export');
-      return;
+  const handleExport = async () => {
+    try {
+      const response = await exportAttendance(filters);
+      if (response.success) {
+        // Assuming the API returns a download URL or blob
+        // For now, we'll create a download link
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'attendance_records.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        setError(response.message || 'Failed to export attendance records');
+      }
+    } catch (err) {
+      console.error('Error exporting attendance records:', err);
+      setError(err.message || 'Failed to export attendance records');
     }
+  };
 
-    const headers = ['Attendance ID', 'Date', 'Status', 'Student ID', 'Name', 'Department', 'Academic Year'];
-    const csvContent = [
-      headers.join(','),
-      ...attendanceRecords.map(record => [
-        record.attendance_id,
-        record.date,
-        record.status,
-        record.student_id,
-        record.name,
-        record.department,
-        record.academic_year
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'attendance_records.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleChangeAttendance = async (attendanceId, newStatus) => {
+    try {
+      const response = await changeAttendanceForAdmin({ attendance_id: attendanceId, status: newStatus });
+      if (response.success) {
+        setAttendanceRecords(prev => 
+          prev.map(record => 
+            record.attendance_id === attendanceId 
+              ? { ...record, status: newStatus } 
+              : record
+          )
+        );
+        // Optionally show success message
+        alert('Attendance status updated successfully');
+      } else {
+        setError(response.message || 'Failed to update attendance status');
+      }
+    } catch (err) {
+      console.error('Error updating attendance:', err);
+      setError(err.message || 'Failed to update attendance status');
+    }
   };
 
   const getStatusColor = (status) => {
@@ -276,7 +291,15 @@ const Attendance = ({ isDarkMode }) => {
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{record.attendance_id}</td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{new Date(record.date).toLocaleDateString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(record.status)}`}>{record.status}</span>
+                      <select
+                        value={record.status}
+                        onChange={(e) => handleChangeAttendance(record.attendance_id, e.target.value)}
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(record.status)} border-0 bg-transparent`}
+                      >
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Late">Late</option>
+                      </select>
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{record.student_id}</td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{record.name}</td>

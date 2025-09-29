@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { fetchNotificationsForStudents, dismissNotificationForStudent } from '../../service/api';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -14,36 +14,15 @@ const Notifications = () => {
     try {
       setLoading(true);
       setError('');
-      const token = localStorage.getItem('accessToken');
-      const studentId = localStorage.getItem('studentId'); // Assume stored during login
+      const response = await fetchNotificationsForStudents();
 
-      if (!studentId) {
-        setError('Student ID not found. Please log in again.');
-        return;
-      }
-
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/fetchnotificationforstudents',
-        {
-          id: studentId,
-          token
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
-          },
-          withCredentials: true
-        }
-      );
-
-      if (response.data.success) {
-        const fetchedNotifications = response.data.data || [];
+      if (response.success) {
+        const fetchedNotifications = response.data || [];
         // Filter out dismissed notifications (assume dismiss sets a flag or removes)
         const activeNotifications = fetchedNotifications.filter(n => !n.dismissed);
         setNotifications(activeNotifications);
       } else {
-        setError(response.data.message || 'Failed to fetch notifications');
+        setError(response.message || 'Failed to fetch notifications');
       }
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -55,27 +34,13 @@ const Notifications = () => {
 
   const dismissNotification = async (notificationId) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await axios.post(
-        'https://finalbackend-mauve.vercel.app/dismissnotificationforstudent',
-        {
-          notification_id: notificationId,
-          token
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
-          },
-          withCredentials: true
-        }
-      );
+      const response = await dismissNotificationForStudent(notificationId);
 
-      if (response.data.success) {
+      if (response.success) {
         // Remove from local state
         setNotifications(notifications.filter(n => n.id !== notificationId));
       } else {
-        alert(response.data.message || 'Failed to dismiss notification');
+        alert(response.message || 'Failed to dismiss notification');
       }
     } catch (err) {
       console.error('Error dismissing notification:', err);

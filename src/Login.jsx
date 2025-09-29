@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { loginAdmin, loginStudent } from "./service/api";
 import ForgotPasswordModal from "./registration/ForgotPasswordModal";
 
 function Login({ onClose, onOpenRegister, loginType }) {
@@ -29,24 +29,14 @@ function Login({ onClose, onOpenRegister, loginType }) {
     setIsLoading(true);
 
     try {
-      // Add login type to the request if your backend needs it
-      const requestData = {
-        ...formData,
-        userType: loginType // Add this if your backend distinguishes between student/admin
-      };
+      const { email, password } = formData;
+      let data;
 
-      const endpoint = loginType === "admin" ? "adminslogin" : "studentslogin";
-
-      const response = await axios.post(
-        `https://finalbackend-mauve.vercel.app/${endpoint}`,
-        requestData,
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true, // allows sending cookies
-        }
-      );
-
-      const data = response.data;
+      if (loginType === "admin") {
+        data = await loginAdmin(email, password);
+      } else {
+        data = await loginStudent(email, password);
+      }
 
       if (!data.success) {
         throw new Error(data.message || "Invalid login credentials");
@@ -88,13 +78,9 @@ function Login({ onClose, onOpenRegister, loginType }) {
       // Determine user role
       const userRole = data.role || loginType;
 
-      // Store authentication data
+      // Store authentication data - standardize to accessToken for both
       if (data.token) {
-        if (userRole === "student") {
-          localStorage.setItem("studentToken", data.token);
-        } else {
-          localStorage.setItem("accessToken", data.token);
-        }
+        localStorage.setItem("accessToken", data.token);
         // Set cookie for backend authentication
         document.cookie = `token=${data.token}; path=/; max-age=86400; secure; samesite=lax`;
       }

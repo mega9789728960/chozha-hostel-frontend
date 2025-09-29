@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
-  forgotPasswordMailPush,
+  forgotPasswordEmailPush,
   forgotPasswordSendCode,
   verifyForgotPasswordCode,
   changePassword
-} from './forgotPasswordApi';
+} from '../service/api';
 
 const ForgotPasswordModal = ({ isOpen, onClose, onLogin }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -49,7 +49,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, onLogin }) => {
     setSuccess('');
     setIsLoading(true);
 
-    const result = await forgotPasswordMailPush(formData.email);
+    const result = await forgotPasswordEmailPush(formData.email);
 
     setIsLoading(false);
 
