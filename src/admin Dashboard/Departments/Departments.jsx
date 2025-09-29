@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardHeader, CardContent } from '../Common/Card';
 import Button from '../Common/Button';
 import Modal from '../Common/Modal';
@@ -97,6 +98,39 @@ const Departments = ({ isDarkMode }) => {
     }
   };
 
+  const handleDeleteDepartment = async (departmentId) => {
+    if (!window.confirm('Are you sure you want to delete this department?')) return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await axios.post(
+        'https://finalbackend-mauve.vercel.app/deletedepartment',
+        {
+          token,
+          department_id: departmentId
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+          },
+          withCredentials: true
+        }
+      );
+
+      if (response.data.success) {
+        setSuccessMessage(response.data.message || 'Department deleted successfully');
+        setShowSuccessModal(true);
+        fetchDepartmentsData();
+      } else {
+        alert(response.data.message || 'Failed to delete department');
+      }
+    } catch (err) {
+      console.error('Error deleting department:', err);
+      alert(`Failed to delete department: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -191,6 +225,7 @@ const Departments = ({ isDarkMode }) => {
             departments={departments}
             onRefresh={fetchDepartmentsData}
             onEdit={openEditModal}
+            onDelete={handleDeleteDepartment}
           />
         </CardContent>
       </Card>
