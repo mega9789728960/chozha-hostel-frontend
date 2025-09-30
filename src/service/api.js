@@ -30,7 +30,7 @@ export const sendOTP = async (email) => {
   if (!email) return { success: false, error: "Email is required", status: 400 };
 
   try {
-    const emailPushResponse = await api.post("/emailpush", { email });
+    const emailPushResponse = await api.post(`${API_BASE}/emailpush`, { email });
     const emailPushData = emailPushResponse.data;
 
     let result;
@@ -55,7 +55,7 @@ export const sendOTP = async (email) => {
 
     if (!result.success) return result;
 
-    const sendCodeResponse = await api.post("/sendcode", { email });
+    const sendCodeResponse = await api.post(`${API_BASE}/sendcode`, { email });
     const sendCodeData = sendCodeResponse.data;
 
     if (sendCodeResponse.status === 200) {
@@ -77,7 +77,7 @@ export const verifyOTP = async (email, code) => {
   if (!email || !code) return { success: false, message: "Email and code are required" };
 
   try {
-    const response = await api.post("/emailverify", { email, code });
+    const response = await api.post(`${API_BASE}/emailverify`, { email, code });
     return { success: true, message: response.data.message || "Email verified successfully" };
   } catch (error) {
     return { success: false, message: error.response?.data?.message || "Error verifying OTP" };
@@ -87,7 +87,7 @@ export const verifyOTP = async (email, code) => {
 // Register User
 export const registerUser = async (payload) => {
   try {
-    const response = await api.post("/register", payload);
+    const response = await api.post(`${API_BASE}/register`, payload);
     return {
       success: true,
       message: response.data.message || "User registered successfully",
@@ -105,7 +105,7 @@ export const fetchStudents = async (filters = {}) => {
     const token = localStorage.getItem("accessToken");
     const requestBody = { token, ...filters }; // Include token in body as per docs
 
-    const response = await api.post("/fetchstudents", requestBody, {
+    const response = await api.post(`${API_BASE}/fetchstudents`, requestBody, {
       headers: { Authorization: `Bearer ${token}` },
       withCredentials: true,
     });
@@ -128,7 +128,7 @@ export const approveStudent = async (registrationNumber) => {
   try {
     const token = localStorage.getItem("accessToken");
     const response = await api.post(
-      "/approve",
+      `${API_BASE}/approve`,
       { registerno: registrationNumber, token }, // ✅ token in body
       { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
     );
@@ -145,7 +145,7 @@ export const addDepartment = async (departmentName) => {
   try {
     const token = localStorage.getItem("accessToken");
     const response = await api.post(
-      "/adddepartments",
+      `${API_BASE}/adddepartments`,
       { department: departmentName, token }, // ✅ token in body
       { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
     );
@@ -160,7 +160,7 @@ export const addDepartment = async (departmentName) => {
 // Fetch Departments
 export const fetchDepartments = async () => {
   try {
-    const response = await api.get("/fetchdepartments");
+    const response = await api.get(`${API_BASE}/fetchdepartments`);
 
     if (response.data.success && Array.isArray(response.data.result)) return response.data.result;
     throw new Error("Invalid response format from API");
@@ -175,7 +175,7 @@ export const editDepartment = async (oldDepartment, newDepartment) => {
   try {
     const token = localStorage.getItem("accessToken");
     const response = await api.put(
-      "/editdepartment",
+      `${API_BASE}/editdepartment`,
       { oldDepartment, newDepartment, token }, // ✅ token in body
       { headers: { Authorization: `Bearer ${token}` } } // ✅ token in headers
     );
@@ -196,7 +196,7 @@ export const rejectStudent = async (registrationNumber, reason) => {
     }
 
     const response = await api.post(
-      "/adminreject",
+      `${API_BASE}/adminreject`,
       { registerno: registrationNumber, reason },
       { headers: { Authorization: `Bearer ${authToken}` }, withCredentials: true }
     );
@@ -222,7 +222,7 @@ export const editStudentDetails = async (studentId, studentData) => {
     }
 
     const response = await api.put(
-      "/editstudentsdetails",
+      `${API_BASE}/editstudentsdetails`,
       { id: studentId, token: authToken, ...studentData },
       { headers: { Authorization: `Bearer ${authToken}` }, withCredentials: true }
     );
@@ -249,7 +249,7 @@ export const showAttends = async (filters = {}) => {
 
     const requestBody = { token: authToken };
 
-    const response = await api.post("/showattends", requestBody, {
+    const response = await api.post(`${API_BASE}/showattends`, requestBody, {
       headers: { Authorization: `Bearer ${authToken}` },
       withCredentials: true, // ✅ ensures cookies are included
     });
@@ -269,7 +269,7 @@ export const showAttends = async (filters = {}) => {
 // Login Admin
 export const loginAdmin = async (email, password) => {
   try {
-    const response = await api.post("/adminslogin", { email, password });
+    const response = await api.post(`${API_BASE}/adminslogin`, { email, password });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -279,7 +279,7 @@ export const loginAdmin = async (email, password) => {
 // Login Student
 export const loginStudent = async (email, password) => {
   try {
-    const response = await api.post("/studentslogin", { email, password });
+    const response = await api.post(`${API_BASE}/studentslogin`, { email, password });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -289,7 +289,7 @@ export const loginStudent = async (email, password) => {
 // Mark Attendance (Student)
 export const markAttendance = async (lat, lng) => {
   try {
-    const response = await api.post("/attendance", { lat, lng });
+    const response = await api.post(`${API_BASE}/attendance`, { lat, lng });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -299,7 +299,7 @@ export const markAttendance = async (lat, lng) => {
 // Mark Absent (Student)
 export const markAbsent = async (lat, lng) => {
   try {
-    const response = await api.post("/absent", { lat, lng });
+    const response = await api.post(`${API_BASE}/absent`, { lat, lng });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -309,7 +309,7 @@ export const markAbsent = async (lat, lng) => {
 // Change Attendance for Admin
 export const changeAttendanceForAdmin = async (studentId, date, status) => {
   try {
-    const response = await api.post("/changeattendanceforadmin", { student_id: studentId, date, status });
+    const response = await api.post(`${API_BASE}/changeattendanceforadmin`, { student_id: studentId, date, status });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -319,7 +319,7 @@ export const changeAttendanceForAdmin = async (studentId, date, status) => {
 // Export Attendance
 export const exportAttendance = async (from, to, email, delete1 = false) => {
   try {
-    const response = await api.post("/exportattendance", { from, to, email, delete1 });
+    const response = await api.post(`${API_BASE}/exportattendance`, { from, to, email, delete1 });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -329,7 +329,7 @@ export const exportAttendance = async (from, to, email, delete1 = false) => {
 // Fetch Complaints for Students
 export const fetchComplaintsForStudents = async () => {
   try {
-    const response = await api.get("/fetchcomplaintsforstudents");
+    const response = await api.get(`${API_BASE}/fetchcomplaintsforstudents`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -339,7 +339,7 @@ export const fetchComplaintsForStudents = async () => {
 // Fetch Complaints for Admins
 export const fetchComplaintsForAdmins = async () => {
   try {
-    const response = await api.get("/fetchcomplaintforadmins");
+    const response = await api.get(`${API_BASE}/fetchcomplaintforadmins`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -349,7 +349,7 @@ export const fetchComplaintsForAdmins = async () => {
 // Register Complaint
 export const registerComplaint = async (title, description, category, priority) => {
   try {
-    const response = await api.post("/registercomplaint", { title, description, category, priority });
+    const response = await api.post(`${API_BASE}/registercomplaint`, { title, description, category, priority });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -359,7 +359,7 @@ export const registerComplaint = async (title, description, category, priority) 
 // Edit Complaint
 export const editComplaint = async (complaintId, title, description, category, priority) => {
   try {
-    const response = await api.post("/editcomplaint", { complaint_id: complaintId, title, description, category, priority });
+    const response = await api.post(`${API_BASE}/editcomplaint`, { complaint_id: complaintId, title, description, category, priority });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -369,7 +369,7 @@ export const editComplaint = async (complaintId, title, description, category, p
 // Change Complaint Status for Admin
 export const changeComplaintStatusForAdmin = async (complaintId, status) => {
   try {
-    const response = await api.post("/complaintstatuschangeforadmin", { complaint_id: complaintId, status });
+    const response = await api.post(`${API_BASE}/complaintstatuschangeforadmin`, { complaint_id: complaintId, status });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -379,7 +379,7 @@ export const changeComplaintStatusForAdmin = async (complaintId, status) => {
 // Resolve Complaints
 export const resolveComplaints = async (complaintId, resolution) => {
   try {
-    const response = await api.post("/resolvecomplaints", { complaint_id: complaintId, resolution });
+    const response = await api.post(`${API_BASE}/resolvecomplaints`, { complaint_id: complaintId, resolution });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -389,7 +389,7 @@ export const resolveComplaints = async (complaintId, resolution) => {
 // Forgot Password Email Push
 export const forgotPasswordEmailPush = async (email) => {
   try {
-    const response = await api.post("/forgotpasswordemailpush", { email });
+    const response = await api.post(`${API_BASE}/forgotpasswordemailpush`, { email });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -399,7 +399,7 @@ export const forgotPasswordEmailPush = async (email) => {
 // Forgot Password Send Code
 export const forgotPasswordSendCode = async (email, token) => {
   try {
-    const response = await api.post("/forgotpasswordsendcode", { email, token });
+    const response = await api.post(`${API_BASE}/forgotpasswordsendcode`, { email, token });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -409,7 +409,7 @@ export const forgotPasswordSendCode = async (email, token) => {
 // Verify Forgot Password Code
 export const verifyForgotPasswordCode = async (email, code, token) => {
   try {
-    const response = await api.post("/veriycodeforgot", { email, code, token });
+    const response = await api.post(`${API_BASE}/veriycodeforgot`, { email, code, token });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -419,7 +419,7 @@ export const verifyForgotPasswordCode = async (email, code, token) => {
 // Change Password
 export const changePassword = async (email, newPassword, token) => {
   try {
-    const response = await api.post("/changepassword", { email, new_password: newPassword, token });
+    const response = await api.post(`${API_BASE}/changepassword`, { email, new_password: newPassword, token });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -429,7 +429,7 @@ export const changePassword = async (email, newPassword, token) => {
 // Delete Department
 export const deleteDepartment = async (id) => {
   try {
-    const response = await api.post("/deletedepartment", { id });
+    const response = await api.post(`${API_BASE}/deletedepartment`, { id });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -439,7 +439,7 @@ export const deleteDepartment = async (id) => {
 // Promote Student
 export const promoteStudent = async (studentId, newYear) => {
   try {
-    const response = await api.post("/promotion", { student_id: studentId, new_year: newYear });
+    const response = await api.post(`${API_BASE}/promotion`, { student_id: studentId, new_year: newYear });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -449,7 +449,7 @@ export const promoteStudent = async (studentId, newYear) => {
 // Push Announcement
 export const pushAnnouncement = async (title, content) => {
   try {
-    const response = await api.post("/pushannocement", { title, content });
+    const response = await api.post(`${API_BASE}/pushannocement`, { title, content });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -459,7 +459,7 @@ export const pushAnnouncement = async (title, content) => {
 // Fetch Announcements for Admin
 export const fetchAnnouncementsForAdmin = async () => {
   try {
-    const response = await api.get("/fetchannocementforadmin");
+    const response = await api.get(`${API_BASE}/fetchannocementforadmin`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -469,7 +469,7 @@ export const fetchAnnouncementsForAdmin = async () => {
 // Edit Announcement for Admin
 export const editAnnouncementForAdmin = async (id, title, content) => {
   try {
-    const response = await api.post("/editannouncementforadmin", { id, title, content });
+    const response = await api.post(`${API_BASE}/editannouncementforadmin`, { id, title, content });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -479,7 +479,7 @@ export const editAnnouncementForAdmin = async (id, title, content) => {
 // Fetch Notifications for Students
 export const fetchNotificationsForStudents = async () => {
   try {
-    const response = await api.get("/fetchnotificationforstudents");
+    const response = await api.get(`${API_BASE}/fetchnotificationforstudents`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -489,7 +489,7 @@ export const fetchNotificationsForStudents = async () => {
 // Dismiss Notification for Student
 export const dismissNotificationForStudent = async (notificationId) => {
   try {
-    const response = await api.post("/dismissnotificationforstudent", { notification_id: notificationId });
+    const response = await api.post(`${API_BASE}/dismissnotificationforstudent`, { notification_id: notificationId });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
