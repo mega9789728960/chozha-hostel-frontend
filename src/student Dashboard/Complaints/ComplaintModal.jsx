@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { registerComplaint } from '../service/api';
+import { registerComplaint } from '@/service/api';
 
 const ComplaintModal = ({ onClose }) => {
   const [title, setTitle] = useState('');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { markAttendance, markAbsent, showAttends } from '../service/api';
+import { markAttendance, markAbsent, showAttends } from '@/service/api';
 
 const Attendance = () => {
 

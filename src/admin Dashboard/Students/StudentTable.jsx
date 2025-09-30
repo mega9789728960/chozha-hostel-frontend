@@ -100,7 +100,7 @@ const StudentTable = ({ isDarkMode, searchTerm, filter, students, onApprove, onR
   };
 
   const getStatusColor = (status) => {
-    if (!status) return 'status-inactive';
+    if (!status || typeof status !== 'string') return 'status-inactive';
 
     switch (status.toLowerCase()) {
       case 'active':

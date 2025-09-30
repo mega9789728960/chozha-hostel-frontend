@@ -100,12 +100,18 @@ export const registerUser = async (payload) => {
 };
 
 // Fetch Students
-export const fetchStudents = async () => {
+export const fetchStudents = async (filters = {}) => {
   try {
-    const response = await api.get("/fetchstudents");
+    const token = localStorage.getItem("accessToken");
+    const requestBody = { token, ...filters }; // Include token in body as per docs
+
+    const response = await api.post("/fetchstudents", requestBody, {
+      headers: { Authorization: `Bearer ${token}` },
+      withCredentials: true,
+    });
 
     const data = response.data;
-    if (data.success && Array.isArray(data.data)) return data.data;
+    if (data.success && Array.isArray(data.students)) return data.students;
     if (Array.isArray(data)) return data;
     if (data.students) return data.students;
     if (data.studentsdata) return data.studentsdata;

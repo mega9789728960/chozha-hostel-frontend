@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchComplaintsForStudents } from '../service/api';
+import { fetchComplaintsForStudents } from '@/service/api';
 import ComplaintModal from './ComplaintModal';
 
 const Complaints = () => {
