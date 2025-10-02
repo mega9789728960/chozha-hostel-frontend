@@ -30,7 +30,7 @@ export const sendOTP = async (email) => {
   if (!email) return { success: false, error: "Email is required", status: 400 };
 
   try {
-    const emailPushResponse = await api.post(`${API_BASE}/emailpush`, { email });
+    const emailPushResponse = await api.post(`/emailpush`, { email });
     const emailPushData = emailPushResponse.data;
 
     let result;
@@ -55,7 +55,7 @@ export const sendOTP = async (email) => {
 
     if (!result.success) return result;
 
-    const sendCodeResponse = await api.post(`${API_BASE}/sendcode`, { email });
+    const sendCodeResponse = await api.post(`/sendcode`, { email });
     const sendCodeData = sendCodeResponse.data;
 
     if (sendCodeResponse.status === 200) {
@@ -87,7 +87,7 @@ export const verifyOTP = async (email, code) => {
 // Register User
 export const registerUser = async (payload) => {
   try {
-    const response = await api.post(`${API_BASE}/register`, payload);
+    const response = await api.post(`/register`, payload);
     return {
       success: true,
       message: response.data.message || "User registered successfully",
@@ -286,20 +286,50 @@ export const loginStudent = async (email, password) => {
   }
 };
 
-// Mark Attendance (Student)
-export const markAttendance = async (lat, lng) => {
+export const markAttendance = async ({ lat, lng, id, token }) => {
   try {
-    const response = await api.post(`${API_BASE}/attendance`, { lat, lng });
+    const accessToken = token || localStorage.getItem("accessToken") || localStorage.getItem("studentToken");
+    console.log("markAttendance token:", accessToken);
+    const requestBody = { lat, lng };
+    if (id) requestBody.id = id;
+    if (accessToken) requestBody.token = accessToken;
+
+    const response = await api.post(`${API_BASE}/attendance`, requestBody, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.data.token) {
+      localStorage.setItem("accessToken", response.data.token);
+    }
+
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-// Mark Absent (Student)
-export const markAbsent = async (lat, lng) => {
+export const markAbsent = async ({ lat, lng, id, token }) => {
   try {
-    const response = await api.post(`${API_BASE}/absent`, { lat, lng });
+    const accessToken = token || localStorage.getItem("accessToken") || localStorage.getItem("studentToken");
+    console.log("markAbsent token:", accessToken);
+    const requestBody = { lat, lng };
+    if (id) requestBody.id = id;
+    if (accessToken) requestBody.token = accessToken;
+
+    const response = await api.post(`${API_BASE}/absent`, requestBody, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.data.token) {
+      localStorage.setItem("accessToken", response.data.token);
+    }
+
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -336,20 +366,25 @@ export const fetchComplaintsForStudents = async () => {
   }
 };
 
-// Fetch Complaints for Admins
-export const fetchComplaintsForAdmins = async () => {
+export const fetchComplaintsForAdmins = async (token, filters = {}) => {
   try {
-    const response = await api.get(`${API_BASE}/fetchcomplaintforadmins`);
+    const response = await api.post(`${API_BASE}/fetchcomplaintforadmins`, { token, ...filters }, { withCredentials: true });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-// Register Complaint
-export const registerComplaint = async (title, description, category, priority) => {
+export const registerComplaint = async (studentId, title, description, category, priority, token) => {
   try {
-    const response = await api.post(`${API_BASE}/registercomplaint`, { title, description, category, priority });
+    const response = await api.post(`${API_BASE}/registercomplaints`, {
+      id: studentId,
+      title,
+      description,
+      category,
+      priority,
+      token
+    });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -366,20 +401,26 @@ export const editComplaint = async (complaintId, title, description, category, p
   }
 };
 
-// Change Complaint Status for Admin
-export const changeComplaintStatusForAdmin = async (complaintId, status) => {
+export const changeComplaintStatusForAdmin = async (complaintId, status, token) => {
   try {
-    const response = await api.post(`${API_BASE}/complaintstatuschangeforadmin`, { complaint_id: complaintId, status });
+    const response = await api.post(
+      `${API_BASE}/complaintstatuschangeforadmin`,
+      { complaint_id: complaintId, status, token },
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-// Resolve Complaints
-export const resolveComplaints = async (complaintId, resolution) => {
+export const resolveComplaints = async (complaintId, token) => {
   try {
-    const response = await api.post(`${API_BASE}/resolvecomplaints`, { complaint_id: complaintId, resolution });
+    const response = await api.post(
+      `${API_BASE}/resolvecomplaints`,
+      { complaint_id: complaintId, token },
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error) {
     throw error.response?.data || error;

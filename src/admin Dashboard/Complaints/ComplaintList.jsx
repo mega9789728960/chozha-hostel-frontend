@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../Common/Button';
-import { fetchStudents, fetchComplaintsForAdmins, changeComplaintStatusForAdmin } from '../../service/api';
+import Modal from '../Common/Modal';
+import { fetchStudents, fetchComplaintsForAdmins, changeComplaintStatusForAdmin, resolveComplaints } from '../../service/api';
 
 const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -11,13 +12,22 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedComplaintId, setSelectedComplaintId] = useState(null);
+  const [newStatus, setNewStatus] = useState('');
+  const [prevStatus, setPrevStatus] = useState('');
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch complaints
-        const complaintsResponse = await fetchComplaintsForAdmins();
+        // Get token from localStorage
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('studentToken');
+
+        // Fetch complaints with token
+        const complaintsResponse = await fetchComplaintsForAdmins(token);
 
         // Fetch students
         const studentsData = await fetchStudents();
@@ -61,24 +71,62 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
   };
 
   const handleUpdateStatus = (complaintId, newStatus) => {
-    // Call admin complaint status change API
-    (async () => {
-      try {
-        const response = await changeComplaintStatusForAdmin(complaintId, newStatus);
+    // Find current status of complaint
+    const complaint = complaints.find(c => c.id === complaintId);
+    const currentStatus = complaint ? complaint.status : '';
 
-        if (response.success) {
-          // Update local state
-          setComplaints(prev => prev.map(c => c.id === complaintId ? { ...c, status: response.status || newStatus } : c));
-          alert(response.message || 'Updated successfully');
-        } else {
-          const message = response.message || response.error || 'Failed to update status';
-          alert(message);
-        }
-      } catch (err) {
-        console.error('Error updating complaint status:', err);
-        alert('Network error. Please try again.');
+    // For "in progress" and "resolved", open modal confirmation
+    if (newStatus.toLowerCase() === 'in progress' || newStatus.toLowerCase() === 'resolved') {
+      setSelectedComplaintId(complaintId);
+      setNewStatus(newStatus);
+      setPrevStatus(currentStatus);
+      setIsModalOpen(true);
+    } else {
+      // For other statuses, update immediately
+      updateStatusApiCall(complaintId, newStatus);
+    }
+  };
+
+  const updateStatusApiCall = async (complaintId, status) => {
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('studentToken');
+      let response;
+      if (status.toLowerCase() === 'resolved') {
+        response = await resolveComplaints(complaintId, token);
+      } else {
+        response = await changeComplaintStatusForAdmin(complaintId, status, token);
       }
-    })();
+
+      if (response.success) {
+        setComplaints(prev => prev.map(c => c.id === complaintId ? { ...c, status: response.data?.status || status } : c));
+        alert(response.message || 'Updated successfully');
+      } else {
+        const message = response.message || response.error || 'Failed to update status';
+        alert(message);
+      }
+    } catch (err) {
+      console.error('Error updating complaint status:', err);
+      alert('Network error. Please try again.');
+    }
+  };
+
+  const handleModalConfirm = () => {
+    if (selectedComplaintId && newStatus) {
+      updateStatusApiCall(selectedComplaintId, newStatus);
+    }
+    setIsModalOpen(false);
+    setSelectedComplaintId(null);
+    setNewStatus('');
+    setPrevStatus('');
+  };
+
+  const handleModalCancel = () => {
+    // Revert select dropdown to previous status by resetting complaints state
+    setComplaints(prev => prev.map(c => c.id === selectedComplaintId ? { ...c, status: prevStatus } : c));
+    setIsModalOpen(false);
+    setSelectedComplaintId(null);
+    setNewStatus('');
+    setPrevStatus('');
   };
 
   const getStatusColor = (status) => {
@@ -172,7 +220,11 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
                     <div className="flex flex-col space-y-2">
                       <Button onClick={() => handleViewDetails(complaint.id)} variant="outline" size="small" isDarkMode={isDarkMode}>View</Button>
                       {complaint.status !== 'resolved' && (
-                        <select onChange={(e) => handleUpdateStatus(complaint.id, e.target.value)} className={isDarkMode ? 'px-2 py-1 text-sm border rounded bg-gray-700 border-gray-600 text-white' : 'px-2 py-1 text-sm border rounded bg-white border-gray-300 text-gray-900'} defaultValue="">
+                        <select
+                          onChange={(e) => handleUpdateStatus(complaint.id, e.target.value)}
+                          className={isDarkMode ? 'px-2 py-1 text-sm border rounded bg-gray-700 border-gray-600 text-white' : 'px-2 py-1 text-sm border rounded bg-white border-gray-300 text-gray-900'}
+                          defaultValue=""
+                        >
                           <option value="" disabled>Update</option>
                           <option value="pending">Pending</option>
                           <option value="in progress">In Progress</option>
@@ -313,6 +365,15 @@ const ComplaintList = ({ isDarkMode, searchTerm, filter }) => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <Modal isOpen={isModalOpen} onClose={handleModalCancel} title="Confirm Status Update" isDarkMode={isDarkMode}>
+        <p>Are you sure you want to update the status to <strong>{newStatus}</strong>?</p>
+        <div className="mt-4 flex justify-end space-x-2">
+          <Button onClick={handleModalCancel} variant="outline" isDarkMode={isDarkMode}>Cancel</Button>
+          <Button onClick={handleModalConfirm} isDarkMode={isDarkMode}>Okay</Button>
+        </div>
+      </Modal>
     </div>
   );
 };

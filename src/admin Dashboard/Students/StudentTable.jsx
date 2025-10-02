@@ -322,24 +322,24 @@ const StudentTable = ({ isDarkMode, searchTerm, filter, students, onApprove, onR
                     <div className="flex items-center space-x-2">
                       {/* Visible quick actions */}
                       <div className="hidden sm:flex space-x-2">
-                        {student.status === 'inactive' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(student.id)}
-                              className="action-btn bg-emerald-500 bg-opacity-20 text-emerald-400 hover:bg-opacity-30"
-                              title="Approve student"
-                            >
-                              ✅
-                            </button>
-                            <button
-                              onClick={() => handleReject(student.id)}
-                              className="action-btn bg-red-500 bg-opacity-20 text-red-400 hover:bg-opacity-30"
-                              title="Reject student"
-                            >
-                              ❌
-                            </button>
-                          </>
-                        )}
+{(['inactive', 'pending', 'not approved'].includes(String(student.status).toLowerCase()) || student.status === false) && (
+  <>
+    <button
+      onClick={() => handleApprove(student.id)}
+      className="action-btn bg-emerald-500 bg-opacity-20 text-emerald-400 hover:bg-opacity-30"
+      title="Approve student"
+    >
+      ✅
+    </button>
+    <button
+      onClick={() => handleReject(student.id)}
+      className="action-btn bg-red-500 bg-opacity-20 text-red-400 hover:bg-opacity-30"
+      title="Reject student"
+    >
+      ❌
+    </button>
+  </>
+)}
                         <button
                           onClick={() => handleEdit(student.id)}
                           className="action-btn bg-blue-500 bg-opacity-20 text-blue-400 hover:bg-opacity-30"

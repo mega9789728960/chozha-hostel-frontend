@@ -43,17 +43,21 @@ const Attendance = () => {
         const lng = position.coords.longitude;
 
         try {
-          const response = await markAttendance({ lat, lng, status: 'present' });
+          const response = await markAttendance({ lat, lng });
+          console.log("markAttendance response:", response);
 
-          if (response.success) {
+          if (response && response.success) {
             setMessage('Attendance marked as present successfully!');
             setAttendanceStatus('present');
             fetchAttendanceHistory(); // Refresh history after marking
+          } else if (response) {
+            setMessage(response.message || response.error || 'Attendance already marked for today.');
           } else {
-            setMessage(response.message || 'Attendance already marked for today.');
+            setError('Unexpected response from server.');
           }
         } catch (err) {
-          setError(err.message || 'An error occurred.');
+          console.error("markAttendance error:", err);
+          setError(err.response?.data?.error || err.response?.data?.message || err.message || 'An error occurred.');
         } finally {
           setLoading(false);
         }
@@ -82,17 +86,17 @@ const Attendance = () => {
         const lng = position.coords.longitude;
 
         try {
-          const response = await markAbsent({ lat, lng, status: 'absent' });
+          const response = await markAbsent({ lat, lng });
 
           if (response.success) {
             setMessage('Attendance marked as absent successfully!');
             setAttendanceStatus('absent');
             fetchAttendanceHistory(); // Refresh history after marking
           } else {
-            setMessage(response.message || 'Attendance already marked for today.');
+            setMessage(response.message || response.error || 'Attendance already marked for today.');
           }
         } catch (err) {
-          setError(err.message || 'An error occurred.');
+          setError(err.response?.data?.error || err.response?.data?.message || err.message || 'An error occurred.');
         } finally {
           setLoading(false);
         }

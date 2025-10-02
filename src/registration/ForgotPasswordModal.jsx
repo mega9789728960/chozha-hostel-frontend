@@ -5,6 +5,7 @@ import {
   verifyForgotPasswordCode,
   changePassword
 } from '../service/api';
+import { validateField } from './validations';
 
 const ForgotPasswordModal = ({ isOpen, onClose, onLogin }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -112,24 +113,32 @@ const ForgotPasswordModal = ({ isOpen, onClose, onLogin }) => {
       return;
     }
 
-    if (formData.newPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
+    const passwordError = validateField('password', formData.newPassword);
+    if (passwordError) {
+      setError(passwordError);
       setIsLoading(false);
       return;
     }
 
-    const result = await changePassword(formData.email, formData.newPassword, token);
+    try {
+      const result = await changePassword(formData.email, formData.newPassword, token);
 
-    setIsLoading(false);
+      setIsLoading(false);
 
-    if (result.success) {
-      setSuccess(result.message);
-      setTimeout(() => {
-        onClose();
-        onLogin(); // Redirect to login
-      }, 2000);
-    } else {
-      setError(result.message);
+      if (result.success) {
+        setSuccess(result.message);
+        setTimeout(() => {
+          onClose();
+          onLogin(); // Redirect to login
+        }, 2000);
+      } else {
+        setError(result.message || 'Failed to change password. Please try again.');
+      }
+    } catch (error) {
+      setIsLoading(false);
+      const errorMessage = error?.message || 'Failed to change password. Please try again.';
+      setError(errorMessage);
+      console.error('Change password error:', error);
     }
   };
 

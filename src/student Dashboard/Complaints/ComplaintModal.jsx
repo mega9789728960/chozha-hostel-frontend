@@ -17,7 +17,31 @@ const ComplaintModal = ({ onClose }) => {
     setSuccess('');
 
     try {
-      const response = await registerComplaint(title, description, category, priority);
+      // Get student ID and token from localStorage/sessionStorage
+      const studentDataStr = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+      const studentToken = localStorage.getItem('studentToken') || sessionStorage.getItem('studentToken');
+
+      console.log('studentDataStr:', studentDataStr);
+      console.log('studentToken:', studentToken);
+
+      let studentId = null;
+      if (studentDataStr) {
+        try {
+          const studentData = JSON.parse(studentDataStr);
+          studentId = studentData.id || null;
+          console.log('Parsed studentData:', studentData);
+        } catch (e) {
+          console.error('Error parsing student data:', e);
+        }
+      }
+
+      if (!studentId || !studentToken) {
+        setError('Authentication error: Missing student ID or token.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await registerComplaint(studentId, title, description, category, priority, studentToken);
 
       if (response.success) {
         setSuccess('Complaint registered successfully!');

@@ -78,9 +78,13 @@ function Login({ onClose, onOpenRegister, loginType }) {
       // Determine user role
       const userRole = data.role || loginType;
 
-      // Store authentication data - standardize to accessToken for both
+      // Store authentication data - use different keys for admin and student
       if (data.token) {
-        localStorage.setItem("accessToken", data.token);
+        if (loginType === "student") {
+          localStorage.setItem("studentToken", data.token);
+        } else {
+          localStorage.setItem("accessToken", data.token);
+        }
         // Set cookie for backend authentication
         document.cookie = `token=${data.token}; path=/; max-age=86400; secure; samesite=lax`;
       }

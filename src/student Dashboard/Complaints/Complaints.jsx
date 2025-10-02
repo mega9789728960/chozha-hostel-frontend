@@ -31,7 +31,15 @@ const Complaints = () => {
       setLoading(true);
       setError(null);
 
+      // Debug token presence
+      console.log('Fetching complaints with tokens:');
+      console.log('localStorage studentToken:', localStorage.getItem('studentToken'));
+      console.log('localStorage accessToken:', localStorage.getItem('accessToken'));
+      console.log('sessionStorage studentToken:', sessionStorage.getItem('studentToken'));
+
       const response = await fetchComplaintsForStudents();
+
+      console.log('Fetch complaints response:', response);
 
       if (response.success) {
         const complaintsData = Array.isArray(response.data) ? response.data : [];
@@ -142,9 +150,15 @@ const Complaints = () => {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Complaint Management</h2>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              if (error) {
+                console.warn('Button enabled despite error:', error);
+              }
+              setShowModal(true);
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto transition-all duration-200 relative z-20"
-            disabled={error}
+            // Temporarily enable button even if error exists
+            disabled={false}
           >
             📝 Raise New Complaint
           </button>
